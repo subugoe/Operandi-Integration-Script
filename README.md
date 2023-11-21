@@ -49,13 +49,13 @@ This script is made to integrate Operandi with other tools such as Goobi. Also, 
 ### Scenario 1: 
 To create a workspace from existing mets and get the results:
 #### Case 1: with mets URL
-`./script.sh   -e -u <user:pass> -w <workspace_dir> -m <mets_url>`
+`./script.sh -e -u <user:pass> -w <workspace_dir> -m <mets_url>`
 #### Case 2: with mets.xml file stored in the workspace
-`./script.sh   -e -u <user:pass> -w <workspace_dir> `
+`./script.sh -e -u <user:pass> -w <workspace_dir> `
 
 ### Scenario 2: 
 To create a workspace from non existing mets and get the results:
-`./script.sh -u <user:pass> -w  <workspace_dir> -i <images> -x <jpg> `
+`./script.sh -u <user:pass> -w <workspace_dir> -i <images> -x <jpg> `
 
 ### Scenario 3: 
 To use an already created ocrd zip file directly and get the results use -z:
@@ -63,8 +63,8 @@ To use an already created ocrd zip file directly and get the results use -z:
 
 ### Other Usage
 #### If you want to add a new workflow use -n
-`./script.sh   -e -u <user:pass> -w <workspace_dir>  -n <nextflow.nf>`
+`./script.sh -e -u <user:pass> -w <workspace_dir> -n <nextflow.nf>`
 #### If you don't want to use the default values
-`./script.sh   -e -u <user:pass> -w <workspace_dir>  -n <nextflow.nf> -s <http://localhost:8000> -f <MAX> -c <8> -r <32>`
+`./script.sh -e -u <user:pass> -w <workspace_dir> -n <nextflow.nf> -s <http://localhost:8000> -f <MAX> -c <8> -r <32>`
 
 
