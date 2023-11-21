@@ -18,7 +18,7 @@ This script is made to integrate Operandi with other tools such as Goobi. Also, 
 
 ## Flags
 
-- `-e [no arguments]` to create a workspace from an existing mets file
+- `-e [no arguments]` to create a workspace from an existing mets file or mets URL
 - `-s [requires an argument. Ex: http://operandi.ocr-d.de]` to set the server address. 
 - `-u [required an argument. Ex: user:pass]` to set operandi user and password.
 - `-w [requires an argument. Ex: WS1, or Workspace/WS1]` to set the workspace directory name or path.
@@ -34,7 +34,7 @@ This script is made to integrate Operandi with other tools such as Goobi. Also, 
 
 ## Default Values and The Corresponding Flags
 
-- `-w` Workspace Directory= `$pwd` 
+- `-w` Workspace Directory= `$(pwd)` 
 - `-s` Server Address = `http://operandi.ocr-d.de`
 - `-f` File Group= `DEFAULT`
 - `-n` Workflow= `3515bd6c-3c79-41a4-9890-fb8bfd479162`
@@ -52,14 +52,19 @@ To create a workspace from existing mets and get the results:
 `./script.sh   -e -u <user:pass> -w <workspace_dir> -m <mets_url>`
 #### Case 2: with mets.xml file stored in the workspace
 `./script.sh   -e -u <user:pass> -w <workspace_dir> `
-#### If you want to add a new workflow use -n
-`./script.sh   -e -u <user:pass> -w <workspace_dir>  -n <nextflow.nf>`
-#### If you don't want to use default values
-`./script.sh   -e -u <user:pass> -w <workspace_dir>  -n <nextflow.nf> -s <http://localhost:8000> -f <MAX> -c <8> -r <32>`
+
 ### Scenario 2: 
 To create a workspace from non existing mets and get the results:
 `./script.sh -u <user:pass> -w  <workspace_dir> -i <images> -x <jpg> `
+
 ### Scenario 3: 
 To use an already created ocrd zip file directly and get the results use -z:
 `./script.sh -u <user:pass> -z <workspace.ocrd.zip>`
+
+### Other Usage
+#### If you want to add a new workflow use -n
+`./script.sh   -e -u <user:pass> -w <workspace_dir>  -n <nextflow.nf>`
+#### If you don't want to use the default values
+`./script.sh   -e -u <user:pass> -w <workspace_dir>  -n <nextflow.nf> -s <http://localhost:8000> -f <MAX> -c <8> -r <32>`
+
 
