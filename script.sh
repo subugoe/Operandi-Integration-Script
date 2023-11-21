@@ -149,7 +149,7 @@ extract_workflow_id() {
 
 # Function to upload a new nextflow workflow
 upload_workflow() {
-    json_data=$(curl -X POST "$SERVER_ADDR/workflow" -F nextflow_script=$WORKFLOW -u "$OPERANDI_USER_PASS")
+    json_data=$(curl -X POST "$SERVER_ADDR/workflow" -F nextflow_script=@$WORKFLOW -u "$OPERANDI_USER_PASS")
     workflow_id=$(echo "$json_data" | grep -o '"resource_id":"[^"]*' | cut -d '"' -f 4)
     echo "Uploaded Workflow ID: $workflow_id"
 }
@@ -216,7 +216,7 @@ main() {
 	    WORKSPACE_DIR="${ZIP%.ocrd.zip}"
     fi
         upload_ocrd_zip
-    if [! -z "$WORKFLOW" ]; then
+    if [ ! -z "$WORKFLOW" ]; then
 	    upload_workflow
     fi
     submit_job
