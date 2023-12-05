@@ -14,25 +14,34 @@ OPERANDI_USER_PASS=""
 IMAGE_DIR=$(pwd)/images
 EXT="jpg"
 CPUs=4
-RAM=32
+RAM=8
 ZIP=""
 workflow_id="3515bd6c-3c79-41a4-9890-fb8bfd479162"
+OLA=""
+LOCAL_OCRD=false
+CURRENT_TIME=`date +"%m%d%Y_%H%M%S"`
+FORKS=1
+OCRD_RESULTS=""
+PAGES=1
+
 
 #Get the options
-while getopts ":s:f:m:u:w:i:x:c:r:n:ez:" opt; do
+while getopts ":s:f:m:u:w:i:x:c:r:n:elz:o:" opt; do
     case $opt in
         s) SERVER_ADDR="$OPTARG" ;;
         f) FILE_GROUP="$OPTARG" ;;
         m) METS_URL="$OPTARG" ;;
         u) OPERANDI_USER_PASS="$OPTARG" ;;
         w) WORKSPACE_DIR="$OPTARG" ;;
-	    x) EXT="$OPTARG" ;;
-	    e) EXISTING_METS=true ;;
-	    i) IMAGE_DIR="$OPTARG" ;;
-	    c) CPUs="$OPTARG" ;;
-	    r) RAM="$OPTARG" ;;
-	    n) WORKFLOW="$OPTARG" ;;
-	    z) ZIP="$OPTARG" ;;
+        x) EXT="$OPTARG" ;;
+        e) EXISTING_METS=true ;;
+        i) IMAGE_DIR="$OPTARG" ;;
+        c) CPUs="$OPTARG" ;;
+        r) RAM="$OPTARG" ;;
+        n) WORKFLOW="$OPTARG" ;;
+        z) ZIP="$OPTARG" ;;
+        o) OLA="$OPTARG" ;;
+        l) LOCAL_OCRD=true ;;
         \?) echo "Invalid option: -$OPTARG" >&2; exit 1 ;;
         :) echo "Option -$OPTARG requires an argument." >&2; exit 1 ;;
     esac
@@ -46,7 +55,7 @@ check_required_flags() {
     fi
 
     # Check if OPERANDI_USER_PASS is missing
-    if [ -z "$OPERANDI_USER_PASS" ]; then
+    if [ -z "$OPERANDI_USER_PASS" ] && [ "$LOCAL_OCRD" == false ]; then
         echo "Error: OPERANDI user:password  is missing."
         exit 1
     fi
@@ -91,8 +100,8 @@ create_workspace_without_mets() {
 # Function to create workspace based on the flag
 create_workspace() {
     if [ "$EXISTING_METS" == true ]; then
-	    clone_mets
-	    download_file_group
+        clone_mets
+        download_file_group
     else
         create_workspace_without_mets
     fi
@@ -162,11 +171,56 @@ submit_job() {
     job_id=$(echo "$json_data" | grep -o '"resource_id":"[^"]*' | cut -d '"' -f 4 | head -n 1)
 }
 
+# Function to use local ocrd
+process_with_local_ocrd() {
+
+    if [[ $WORKSPACE_DIR != *$(pwd)* ]]; then
+        WORKSPACE_DIR_LOCAL=$(pwd)/"$WORKSPACE_DIR"_local/data
+    else
+        WORKSPACE_DIR_LOCAL="$WORKSPACE_DIR"_local/data
+    fi
+
+    METS_SERVER_LOG="${WORKSPACE_DIR_LOCAL}/mets_server.log"
+    SOCKET_PATH="${WORKSPACE_DIR_LOCAL}/mets_server.sock"
+    unzip "$WORKSPACE_DIR".ocrd.zip -d "$WORKSPACE_DIR"_local
+    PAGES=$(find "$WORKSPACE_DIR_LOCAL/$FILE_GROUP" -type f | wc -l)
+    ocrd workspace -U "${SOCKET_PATH}" -d "${WORKSPACE_DIR_LOCAL}" server start > "${METS_SERVER_LOG}" 2>&1 &
+
+    # Execute the Nextflow script
+    nextflow run "${WORKFLOW}" \
+    -ansi-log false \
+    -with-report "report-${CPUs}-${RAM}-${FORKS}-${CURRENT_TIME}.html" \
+    --input_file_group "${FILE_GROUP}" \
+    --mets "${WORKSPACE_DIR_LOCAL}/mets.xml" \
+    --mets_socket "${SOCKET_PATH}" \
+    --workspace_dir "${WORKSPACE_DIR_LOCAL}" \
+    --singularity_wrapper " " \
+    --pages "${PAGES}" \
+    --cpus "${CPUs}" \
+    --ram "${RAM}" \
+    --forks "${FORKS}"
+    # Stop the mets server started above
+    ocrd workspace -U "${SOCKET_PATH}" -d "${WORKSPACE_DIR_LOCAL}" server stop
+    ocrd zip bag -i "$WORKSPACE_DIR_LOCAL" -d "$WORKSPACE_DIR_LOCAL"
+    OCRD_RESULTS="$WORKSPACE_DIR_LOCAL".ocrd.zip
+}
+
 
 # Function to download results
 download_results() {
     echo "Downloading the results..."
-    curl -X GET "$SERVER_ADDR/workspace/$workspace_id" -u "$OPERANDI_USER_PASS" -H "accept: application/vnd.ocrd+zip" -o "$WORKSPACE_DIR"_results.zip
+    curl -X GET "$SERVER_ADDR/workspace/$workspace_id" -u "$OPERANDI_USER_PASS" -H "accept: application/vnd.ocrd+zip" -o "$OCRD_RESULTS"
+    if [ $? -ne 0 ]; then
+        echo "Failed to download the results."
+        exit 1
+    fi
+    echo "Results are available now"
+}
+
+# Function to download results
+upload_to_ola_hd() {
+    echo "Uploading the results to OLA-HD..."
+    curl -X POST 141.5.99.53/api/bag -u "$OLA" -H 'content-type: multipart/form-data' -F file=@"$OCRD_RESULTS"
     if [ $? -ne 0 ]; then
         echo "Failed to download the results."
         exit 1
@@ -205,23 +259,32 @@ check_workflow_status() {
 main() {
     #remove the / from the end of server address
     SERVER_ADDR="${SERVER_ADDR%/}"
+    OCRD_RESULTS="$WORKSPACE_DIR"_results.zip
 
     check_required_flags
     #check if the zip is already given or not    
     if [ -z "$ZIP" ]; then
-    	create_workspace
-    	generate_ocrd_zip
-    	validate_ocrd_zip
+        create_workspace
+        generate_ocrd_zip
+        validate_ocrd_zip
     else
-	    WORKSPACE_DIR="${ZIP%.ocrd.zip}"
+        WORKSPACE_DIR="${ZIP%.ocrd.zip}"
     fi
+
+    if [ "$LOCAL_OCRD" == true ]; then
+        process_with_local_ocrd
+    else
         upload_ocrd_zip
-    if [ ! -z "$WORKFLOW" ]; then
-	    upload_workflow
+        if [ ! -z "$WORKFLOW" ]; then
+            upload_workflow
+        fi
+        submit_job
+        check_workflow_status
     fi
-    submit_job
-    check_workflow_status
-    echo "Results are available now"
+    if [ ! -z "$OLA" ]; then
+        echo "Uploading to OLA-HD..."
+        upload_to_ola_hd
+    fi
 }
 
 main
