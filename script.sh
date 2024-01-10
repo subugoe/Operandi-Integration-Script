@@ -29,14 +29,13 @@ ERROR_LOG="error_log.txt"
 UNCOMPLETED_STEP=false
 
 #Get the options
-while getopts ":s:f:m:u:w:i:x:c:r:n:elz:o:" opt; do
+while getopts ":s:f:m:u:w:i:c:r:n:elz:o:" opt; do
     case $opt in
         s) SERVER_ADDR="$OPTARG" ;;
         f) FILE_GROUP="$OPTARG" ;;
         m) METS_URL="$OPTARG" ;;
         u) OPERANDI_USER_PASS="$OPTARG" ;;
         w) WORKSPACE_DIR="$OPTARG" ;;
-        x) EXT="$OPTARG" ;;
         e) EXISTING_METS=true ;;
         i) IMAGE_DIR="$OPTARG" ;;
         c) CPUs="$OPTARG" ;;
@@ -97,6 +96,23 @@ mark_step_completed() {
     touch "$completion_flag"
 }
 
+extract_extension() {
+  # Check if the directory exists
+  if [ ! -d "$IMAGE_DIR" ]; then
+    log_error "Directory $IMAGE_DIR does not exist."
+    exit 1
+  fi
+  # Get the first file in the directory
+  first_file=$(find "$IMAGE_DIR" -maxdepth 1 -type f | head -n 1)
+
+  # Check if there are any files in the directory
+  if [ -z "$first_file" ]; then
+    log_error "No files found in $IMAGE_DIR."
+    exit 1
+  fi
+  EXT="${first_file##*.}"
+}
+
 # Function to create workspace directory and clone mets file from url
 clone_mets() {
     echo "Cloning mets from URL..."
@@ -113,6 +129,7 @@ clone_mets() {
 # Function to create a workspace without METS
 create_workspace_without_mets() {
     echo "Creating a workspace without mets..."
+    extract_extension
     ocrd workspace -d $WORKSPACE_DIR init
     ocrd workspace -d $WORKSPACE_DIR set-id 'unique ID'
     mkdir -p $WORKSPACE_DIR/images

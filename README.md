@@ -26,7 +26,6 @@ This script is made to integrate Operandi with other tools such as Goobi and Kit
 - `-u [required an argument. Ex: user:pass]` to set operandi user and password.
 - `-w [requires an argument. Ex: WS1, or Workspace/WS1]` to set the workspace directory name or path.
 - `-m [requires an argument. Ex: http://url.mets.xml]` to set mets URL that needs to be cloned.
-- `-x [requires an argument. Ex: tiff, jpg]` to set the images extension.
 - `-i [requires an argument. Ex: path/to/images/]` to set the path of the images directory.
 - `-f [requires an argument. Ex: MIN, MAX, DEFAULT..etc]` to set the file group.
 - `-n [requires an argument. Ex: nextflow.nf]` to upload a new Nextflow workflow.
@@ -42,7 +41,6 @@ This script is made to integrate Operandi with other tools such as Goobi and Kit
 - `-f` File Group= `DEFAULT`
 - `-n` Workflow= `3515bd6c-3c79-41a4-9890-fb8bfd479162`
 - `-i` Images Directory= `$(pwd)/images`
-- `-x` Image extension = `jpg`
 - `-c` CPUs= `4`
 - `-r` RAM= `8`
 
@@ -60,7 +58,7 @@ To create a workspace from existing mets and get the results:
 `./script.sh -e -u <user:pass> -w <workspace_dir> `
 ### Scenario 2: 
 To create a workspace from only the images and don't have mets file for those images
-`./script.sh -u <user:pass> -w  <workspace_dir> -i <images> -x <jpg> `
+`./script.sh -u <user:pass> -w  <workspace_dir> -i <images>`
 ### Scenario 3: 
 To use an already created OCR-D zip file directly and get the results use -z
 `./script.sh -u <user:pass> -z <workspace.ocrd.zip>`
@@ -68,7 +66,7 @@ To use an already created OCR-D zip file directly and get the results use -z
 To use the local OCR-D in any of the above cases use -l and -n to set the nextflow script 
 This is an example of a nextflow that can be used in this case:
 https://github.com/subugoe/operandi/blob/main/src/utils/operandi_utils/hpc/nextflow_workflows/default_workflow.nf
-`./script.sh -w <workspace_dir> -i <images> -x <jpg> -l -n <default_workflow.nf>`
+`./script.sh -w <workspace_dir> -i <images> -l -n <default_workflow.nf>`
 ### Scenario 5: 
 If you want to upload the results to OLA-HD use -o to insert OLA-HD username and password
 `./script.sh -e -u <user:pass> -w <workspace_dir> -o <ola_user:ola_pass>`
