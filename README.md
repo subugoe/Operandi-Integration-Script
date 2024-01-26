@@ -47,6 +47,14 @@ This script is made to integrate Operandi with other tools such as Goobi and Kit
 
 ## Usage
 All values can be set using the corresponding flags unless you want to use the default values. The script is so dynamic, you only need to know which values are required in your case and set them by the corresponding flags. 
+To use email notification for the logs, you need to modify the following variables in the script:
+```# Email settings
+SMTP_SERVER="smtp.example.com"
+SENDER_EMAIL="sender@example.com"
+SENDER_PASSWORD="your_password"
+RECIPIENT_EMAIL=""
+```
+As long as RECIPIENT_EMAIL is empty, the script will not send any email notification.
 
 Provided below are some scenarios but no all possible scenarios.
 

@@ -1,5 +1,13 @@
 #!/bin/bash
 
+
+# Email settings
+SMTP_SERVER="smtp.example.com"
+SENDER_EMAIL="sender@example.com"
+SENDER_PASSWORD="your_password"
+RECIPIENT_EMAIL=""
+
+
 # Set the OCRD_DOWNLOAD_RETRIES environment variable
 export OCRD_DOWNLOAD_RETRIES=3
 
@@ -23,10 +31,11 @@ CURRENT_TIME=`date +"%m%d%Y_%H%M%S"`
 FORKS=1
 OCRD_RESULTS=""
 PAGES=1
-# Log file for errors
 ERROR_LOG="error_log.txt"
-# Global flag to indicate if any step is uncompleted
+LOG_FILE="log_file.txt"
+
 UNCOMPLETED_STEP=false
+
 
 #Get the options
 while getopts ":s:f:m:u:w:i:c:r:n:elz:o:" opt; do
@@ -64,20 +73,50 @@ check_required_flags() {
 
 }
 
-# Function to log errors with timestamp and workspace name
-log_error() {
-    echo "[ERROR] $(date '+%Y-%m-%d %H:%M:%S') - Workspace: $WORKSPACE_DIR - $1" >> "$ERROR_LOG"
+# Function to send log file content by email using curl
+send_log_by_email() {
+    local subject="Log File - $WORKSPACE_DIR"
+    local body_file="$ERROR_LOG"
+
+    # Check if the log file exists
+    if [ -f "$body_file" ]; then
+        # Use curl to send the email with the log file content as body
+        curl -s --url "smtps://$SMTP_SERVER:465" \
+            --ssl-reqd --mail-from "$SENDER_EMAIL" --mail-rcpt "$RECIPIENT_EMAIL" \
+            --user "$SENDER_EMAIL:$SENDER_PASSWORD" --insecure \
+            --subject "$subject" --mail-rcpt "$RECIPIENT_EMAIL" \
+            --body "$(cat "$body_file")" --verbose
+    else
+        echo "Log file not found: $body_file"
+    fi
 }
 
-# Function to log information with timestamp and workspace name
+# Function to log errors and information with timestamp and workspace name
 log_info() {
-    echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') - Workspace: $WORKSPACE_DIR - $1"
+    local log_message="$1"
+    echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') - Workspace: $WORKSPACE_DIR - $log_message"
+    echo "[INFO] $(date '+%Y-%m-%d %H:%M:%S') - Workspace: $WORKSPACE_DIR - $log_message" >> "$LOG_FILE"
+}
+
+# Function to log errors with timestamp and workspace name
+log_error() {
+    local error_message="$1"
+    echo "[ERROR] $(date '+%Y-%m-%d %H:%M:%S') - Workspace: $WORKSPACE_DIR - $error_message" >> "$ERROR_LOG"
+    echo "[ERROR] $(date '+%Y-%m-%d %H:%M:%S') - Workspace: $WORKSPACE_DIR - $error_message" >> "$LOG_FILE"
 }
 
 # Function to check if a step has completed
 check_step_completion() {
     local step_name="$1"
     local completion_flag="$WORKSPACE_DIR/.${step_name}_completed"
+
+    local step_dir="$WORKSPACE_DIR/.${step_name}_snapshot"
+    if [ -d "$step_dir" ]; then
+        # Source relevant parameters from the directory using specific filenames
+        workflow_id=$(<"$step_dir/workflow_id")
+        job_id=$(<"$step_dir/job_id")
+        workspace_id=$(<"$step_dir/workspace_id")
+    fi
 
     if [ -f "$completion_flag" ] && [ "$UNCOMPLETED_STEP" == false ]; then
         log_info "Skipping $step_name as it has already been completed."
@@ -89,28 +128,39 @@ check_step_completion() {
     fi
 }
 
+
 # Function to mark a step as completed
 mark_step_completed() {
     local step_name="$1"
     local completion_flag="$WORKSPACE_DIR/.${step_name}_completed"
     touch "$completion_flag"
+
+    # Create a directory for the step
+    local step_dir="$WORKSPACE_DIR/.${step_name}_snapshot"
+    mkdir -p "$step_dir"
+
+    # Store relevant parameters as files in the directory
+    echo "$workflow_id" > "$step_dir/workflow_id"
+    echo "$job_id" > "$step_dir/job_id"
+    echo "$workspace_id" > "$step_dir/workspace_id"
 }
 
-extract_extension() {
-  # Check if the directory exists
-  if [ ! -d "$IMAGE_DIR" ]; then
-    log_error "Directory $IMAGE_DIR does not exist."
-    exit 1
-  fi
-  # Get the first file in the directory
-  first_file=$(find "$IMAGE_DIR" -maxdepth 1 -type f | head -n 1)
 
-  # Check if there are any files in the directory
-  if [ -z "$first_file" ]; then
-    log_error "No files found in $IMAGE_DIR."
-    exit 1
-  fi
-  EXT="${first_file##*.}"
+extract_extension() {
+    # Check if the directory exists
+    if [ ! -d "$IMAGE_DIR" ]; then
+        log_error "Directory $IMAGE_DIR does not exist."
+        exit 1
+    fi
+    # Get the first file in the directory
+    first_file=$(find "$IMAGE_DIR" -maxdepth 1 -type f | head -n 1)
+
+    # Check if there are any files in the directory
+    if [ -z "$first_file" ]; then
+        log_error "No files found in $IMAGE_DIR."
+        exit 1
+    fi
+    EXT="${first_file##*.}"
 }
 
 # Function to create workspace directory and clone mets file from url
@@ -211,12 +261,12 @@ upload_ocrd_zip() {
     echo "Extracted workspace_id: $workspace_id"
 }
 
-# # Function to get one workflow ID from Operandi
-# extract_workflow_id() {
-#     json_data=$(curl -X GET "$SERVER_ADDR/workflow" -u "$OPERANDI_USER_PASS")
-#     workflow_id=$(echo "$json_data" | grep -o '"resource_id":"[^"]*' | cut -d '"' -f 4 | head -n 1)
-#     echo "Extracted workflow ID: $workflow_id"
-# }
+# Function to get one workflow ID from Operandi
+extract_workflow_id() {
+    json_data=$(curl -X GET "$SERVER_ADDR/workflow" -u "$OPERANDI_USER_PASS")
+    workflow_id=$(echo "$json_data" | grep -o '"resource_id":"[^"]*' | cut -d '"' -f 4 | head -n 1)
+    echo "Extracted workflow ID: $workflow_id"
+}
 
 # Function to upload a new nextflow workflow
 upload_workflow() {
@@ -338,6 +388,7 @@ main() {
     #remove the / from the end of server address
     SERVER_ADDR="${SERVER_ADDR%/}"
     OCRD_RESULTS="$WORKSPACE_DIR"_results.zip
+    echo "$RECIPIENT_EMAIL"
 
     check_required_flags
     # Check if the zip is already given or not
@@ -376,6 +427,11 @@ main() {
     if [ ! -z "$OLA" ]; then
         check_step_completion "upload_to_ola_hd" || { log_info "Uploading to OLA-HD..."; upload_to_ola_hd || { log_error "Failed to upload results to OLA-HD."; exit 1; }; }
         mark_step_completed "upload_to_ola_hd"
+    fi
+    
+    if [ -n "$RECIPIENT_EMAIL" ]; then
+        echo "Sending log by email to $RECIPIENT_EMAIL..."
+        send_log_by_email
     fi
 }
 
