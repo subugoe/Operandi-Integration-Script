@@ -103,6 +103,10 @@ log_error() {
     local error_message="$1"
     echo "[ERROR] $(date '+%Y-%m-%d %H:%M:%S') - Workspace: $WORKSPACE_DIR - $error_message" >> "$ERROR_LOG"
     echo "[ERROR] $(date '+%Y-%m-%d %H:%M:%S') - Workspace: $WORKSPACE_DIR - $error_message" >> "$LOG_FILE"
+    if [ -n "$RECIPIENT_EMAIL" ]; then
+        echo "Sending log by email to $RECIPIENT_EMAIL..."
+        send_log_by_email
+    fi
 }
 
 # Function to check if a step has completed
