@@ -2,10 +2,13 @@
 
 
 # Email settings
-SMTP_SERVER="smtp.example.com"
-SENDER_EMAIL="sender@example.com"
-SENDER_PASSWORD="your_password"
+SMTP_SERVER="email.gwdg.de:587"
+SENDER_EMAIL="ocrdimpl@sub.uni-goettingen.de"
+SENDER_PASSWORD=""
+EMAIL_USER="ocrdimpl"
 RECIPIENT_EMAIL=""
+
+
 
 
 # Set the OCRD_DOWNLOAD_RETRIES environment variable
@@ -75,21 +78,38 @@ check_required_flags() {
 
 # Function to send log file content by email using curl
 send_log_by_email() {
+    local smtp_server="$SMTP_SERVER"
+    local sender_email="$SENDER_EMAIL"
+    local recipient_email="$RECIPIENT_EMAIL"
+    local username="$EMAIL_USER"
+    local password="$SENDER_PASSWORD"
     local subject="Log File - $WORKSPACE_DIR"
-    local body_file="$ERROR_LOG"
+    local body_file="$LOG_FILE"
 
     # Check if the log file exists
     if [ -f "$body_file" ]; then
-        # Use curl to send the email with the log file content as body
-        curl -s --url "smtps://$SMTP_SERVER:465" \
-            --ssl-reqd --mail-from "$SENDER_EMAIL" --mail-rcpt "$RECIPIENT_EMAIL" \
-            --user "$SENDER_EMAIL:$SENDER_PASSWORD" --insecure \
-            --subject "$subject" --mail-rcpt "$RECIPIENT_EMAIL" \
-            --body "$(cat "$body_file")" --verbose
+        # Prepare email content in mail.txt format
+        echo "From: \"Operandi Logs\" <$sender_email>" > mail.txt
+        echo "To: \"Operandi User\" <$recipient_email>" >> mail.txt
+        echo "Subject: $subject" >> mail.txt
+        echo "" >> mail.txt
+        cat "$body_file" >> mail.txt
+
+        # Use curl to send the email
+        curl    --ssl-reqd \
+                --url "smtp://$smtp_server" \
+                --user "$username:$password" \
+                --mail-from "$sender_email" \
+                --mail-rcpt "$recipient_email" \
+                -T mail.txt
+
+        # Clean up the temporary mail.txt file
+       # rm mail.txt
     else
         echo "Log file not found: $body_file"
     fi
 }
+
 
 # Function to log errors and information with timestamp and workspace name
 log_info() {
