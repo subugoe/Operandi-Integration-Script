@@ -2,10 +2,10 @@
 
 
 # Email settings
-SMTP_SERVER="email.gwdg.de:587"
+SMTP_SERVER="smtp://email.gwdg.de:587"
 SENDER_EMAIL="ocrdimpl@sub.uni-goettingen.de"
 SENDER_PASSWORD=""
-EMAIL_USER="ocrdimpl"
+AUTH_USER="ocrdimpl"
 RECIPIENT_EMAIL=""
 
 
@@ -15,7 +15,6 @@ RECIPIENT_EMAIL=""
 export OCRD_DOWNLOAD_RETRIES=3
 
 # Default values
-WORKSPACE_DIR=$(pwd)
 EXISTING_METS=false
 SERVER_ADDR="http://operandi.ocr-d.de" 
 FILE_GROUP="DEFAULT"
@@ -31,8 +30,10 @@ workflow_id="3515bd6c-3c79-41a4-9890-fb8bfd479162"
 OLA=""
 LOCAL_OCRD=false
 CURRENT_TIME=`date +"%m%d%Y_%H%M%S"`
+WORKSPACE_DIR="ws_$CURRENT_TIME"
 FORKS=1
 OCRD_RESULTS=""
+OCRD_RESULTS_LOGS=""
 PAGES=1
 ERROR_LOG="error_log.txt"
 LOG_FILE="log_file.txt"
@@ -76,40 +77,36 @@ check_required_flags() {
 
 }
 
-# Function to send log file content by email using curl
+# Function to send log file content by email using mail
 send_log_by_email() {
-    local smtp_server="$SMTP_SERVER"
-    local sender_email="$SENDER_EMAIL"
-    local recipient_email="$RECIPIENT_EMAIL"
-    local username="$EMAIL_USER"
-    local password="$SENDER_PASSWORD"
-    local subject="Log File - $WORKSPACE_DIR"
-    local body_file="$LOG_FILE"
+    mail -s "$WORKSPACE_DIR - Logs" "$RECIPIENT_EMAIL" < "$LOG_FILE"
+}
 
+# Function to send log file content by email using curl
+send_log_by_email2() {
     # Check if the log file exists
-    if [ -f "$body_file" ]; then
+    if [ -f "$LOG_FILE" ]; then
         # Prepare email content in mail.txt format
-        echo "From: \"Operandi Logs\" <$sender_email>" > mail.txt
-        echo "To: \"Operandi User\" <$recipient_email>" >> mail.txt
-        echo "Subject: $subject" >> mail.txt
+        echo "From: \"Operandi Logs\" <$SENDER_EMAIL>" > mail.txt
+        echo "To: \"Operandi User\" <$RECIPIENT_EMAIL>" >> mail.txt
+        echo "Subject: $WORKSPACE_DIR - Logs" >> mail.txt
         echo "" >> mail.txt
-        cat "$body_file" >> mail.txt
+        cat "$LOG_FILE" >> mail.txt
 
         # Use curl to send the email
         curl    --ssl-reqd \
-                --url "smtp://$smtp_server" \
-                --user "$username:$password" \
-                --mail-from "$sender_email" \
-                --mail-rcpt "$recipient_email" \
-                -T mail.txt
+                --url "$SMTP_SERVER" \
+                --user "$AUTH_USER:$SENDER_PASSWORD" \
+                --mail-from "$SENDER_EMAIL" \
+                --mail-rcpt "$RECIPIENT_EMAIL" \
+                --upload-file mail.txt
 
         # Clean up the temporary mail.txt file
-       # rm mail.txt
+        rm mail.txt
     else
-        echo "Log file not found: $body_file"
+        echo "Log file not found: $LOG_FILE"
     fi
 }
-
 
 # Function to log errors and information with timestamp and workspace name
 log_info() {
@@ -367,6 +364,17 @@ download_results() {
 }
 
 # Function to download results
+download_results_logs() {
+    echo "Downloading the results..."
+    curl -X GET "$SERVER_ADDR/workflow/$workflow_id/logs" -u "$OPERANDI_USER_PASS" -H "accept: application/vnd.zip" -o "$OCRD_RESULTS_LOGS"
+    if [ $? -ne 0 ]; then
+        log_error "Failed to download the results logs."
+        exit 1
+    fi
+    echo "Results Logs are available now"
+}
+
+# Function to download results
 upload_to_ola_hd() {
     echo "Uploading the results to OLA-HD..."
     curl -X POST 141.5.99.53/api/bag -u "$OLA" -H 'content-type: multipart/form-data' -F file=@"$OCRD_RESULTS"
@@ -396,6 +404,7 @@ check_job_status() {
 	if [ "$job_state" == "SUCCESS" ]; then
         echo "Job completed successfully."
         download_results
+        download_results_logs
         break
     fi
 
@@ -412,9 +421,11 @@ main() {
     #remove the / from the end of server address
     SERVER_ADDR="${SERVER_ADDR%/}"
     OCRD_RESULTS="$WORKSPACE_DIR"_results.zip
-    echo "$RECIPIENT_EMAIL"
+    OCRD_RESULTS_LOGS="$WORKSPACE_DIR"_results_logs.zip
 
     check_required_flags
+    extract_workflow_id
+
     # Check if the zip is already given or not
     if [ -z "$ZIP" ]; then
         check_step_completion "create_workspace" || { create_workspace || { log_error "Failed to create workspace."; exit 1; }; }

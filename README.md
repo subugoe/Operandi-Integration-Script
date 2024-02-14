@@ -36,39 +36,45 @@ This script is made to integrate Operandi with other tools such as Goobi and Kit
 
 ## Default Values and The Corresponding Flags
 
-- `-w` Workspace Directory= `$(pwd)` 
+- `-w` Workspace Directory= `ws_timestamp` 
 - `-s` Server Address = `http://operandi.ocr-d.de`
 - `-f` File Group= `DEFAULT`
-- `-n` Workflow= `3515bd6c-3c79-41a4-9890-fb8bfd479162`
+- `-n` Workflow= `$first_workflow_in_operandi_server`
 - `-i` Images Directory= `$(pwd)/images`
 - `-c` CPUs= `4`
 - `-r` RAM= `8`
 
 
-## Usage
-All values can be set using the corresponding flags unless you want to use the default values. The script is so dynamic, you only need to know which values are required in your case and set them by the corresponding flags. 
 
-To use email notification for the logs, you need to modify the following variables in the script:
+### email notifications for the Logs
+To activate it, you need to set RECIPIENT_EMAIL to a non-empty value. As long as RECIPIENT_EMAIL is empty, the script will not send any email notification.
+
+There are two ways to send email notifications for the logs depending on the service provider requirements. You will find two functions in the script t do this: `send_log_by_email` and `send_log_by_email2`. You can modify which function do you want to use at line 469.
+
+`send_log_by_email` uses `mail` command line to send emails and it requires that your machine must be whitelisted on the mailer server. Do this by asking the service provider eg: GWDG to set you machine ip in the whitelist for the mailer service.
+
+`send_log_by_email2` uses `curl` command line to send emails. In this case, you need to modify the following variables in the script:
 ```# Email settings
 SMTP_SERVER="smtp.example.com"
 SENDER_EMAIL="sender@example.com"
 SENDER_PASSWORD="your_password"
-RECIPIENT_EMAIL=""
+RECIPIENT_EMAIL="recipient@example.com"
 ```
-As long as RECIPIENT_EMAIL is empty, the script will not send any email notification.
 
+## Usage
+All values can be set using the corresponding flags unless you want to use the default values. The script is so dynamic, you only need to know which values are required in your case and set them by the corresponding flags. 
 
 Provided below are some scenarios but no all possible scenarios.
 
 ### Scenario 1: 
 To create a workspace from existing mets and get the results:
 #### Case 1: with mets URL
-`./script.sh -e -u <user:pass> -w <workspace_dir> -m <mets_url>`
+`./script.sh -e -u <user:pass> -m <mets_url>`
 #### Case 2: with mets.xml file stored in the workspace
-`./script.sh -e -u <user:pass> -w <workspace_dir> `
+`./script.sh -e -u <user:pass>`
 ### Scenario 2: 
 To create a workspace from only the images and don't have mets file for those images
-`./script.sh -u <user:pass> -w  <workspace_dir> -i <images>`
+`./script.sh -u <user:pass> -i <images>`
 ### Scenario 3: 
 To use an already created OCR-D zip file directly and get the results use -z
 `./script.sh -u <user:pass> -z <workspace.ocrd.zip>`
@@ -76,13 +82,13 @@ To use an already created OCR-D zip file directly and get the results use -z
 To use the local OCR-D in any of the above cases use -l and -n to set the nextflow script 
 This is an example of a nextflow that can be used in this case:
 https://github.com/subugoe/operandi/blob/main/src/utils/operandi_utils/hpc/nextflow_workflows/default_workflow.nf
-`./script.sh -w <workspace_dir> -i <images> -l -n <default_workflow.nf>`
+`./script.sh -i <images> -l -n <default_workflow.nf>`
 ### Scenario 5: 
 If you want to upload the results to OLA-HD use -o to insert OLA-HD username and password
-`./script.sh -e -u <user:pass> -w <workspace_dir> -o <ola_user:ola_pass>`
+`./script.sh -e -u <user:pass> -o <ola_user:ola_pass>`
 ### Other Usages:
 #### If you want to upload a new workflow to Operandi use -n
-`./script.sh -e -u <user:pass> -w <workspace_dir>  -n <default_workflow.nf>`
+`./script.sh -e -u <user:pass> -n <default_workflow.nf>`
 #### If you don't want to use default values, you can set any value by its flag
-`./script.sh -e -u <user:pass> -w <workspace_dir>  -n <default_workflow.nf> -s <http://localhost:8000> -f <MAX> -c <8> -r <32>`
+`./script.sh -e -u <user:pass> -w <workspace_dir> -n <default_workflow.nf> -s <http://localhost:8000> -f <MAX> -c <8> -r <32>`
 
