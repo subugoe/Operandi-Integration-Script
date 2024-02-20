@@ -13,7 +13,7 @@ This script is made to integrate Operandi with other tools such as Goobi and Kit
 - Uploads a workflow or use the default one
 - Submit the job to Operandi
 - Checks the status of the job till it is finished
-- Download the results
+- Download the results zip file and logs zip file
 - Archive the results and upload it to OLA-HD 
 
 
@@ -36,10 +36,10 @@ This script is made to integrate Operandi with other tools such as Goobi and Kit
 
 ## Default Values and The Corresponding Flags
 
-- `-w` Workspace Directory= `ws_timestamp` 
+- `-w` Workspace Directory= `ws_<current_time_stamp>` 
 - `-s` Server Address = `http://operandi.ocr-d.de`
 - `-f` File Group= `DEFAULT`
-- `-n` Workflow= `$first_workflow_in_operandi_server`
+- `-n` Workflow= `default_workflow`
 - `-i` Images Directory= `$(pwd)/images`
 - `-c` CPUs= `4`
 - `-r` RAM= `8`

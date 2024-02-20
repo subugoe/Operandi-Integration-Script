@@ -26,7 +26,7 @@ EXT="jpg"
 CPUs=4
 RAM=8
 ZIP=""
-workflow_id="3515bd6c-3c79-41a4-9890-fb8bfd479162"
+workflow_id="default_workflow"
 OLA=""
 LOCAL_OCRD=false
 CURRENT_TIME=`date +"%m%d%Y_%H%M%S"`
@@ -366,7 +366,7 @@ download_results() {
 # Function to download results
 download_results_logs() {
     echo "Downloading the results..."
-    curl -X GET "$SERVER_ADDR/workflow/$workflow_id/logs" -u "$OPERANDI_USER_PASS" -H "accept: application/vnd.zip" -o "$OCRD_RESULTS_LOGS"
+    curl -X GET "$SERVER_ADDR/workflow/$workflow_id/$job_id/logs" -u "$OPERANDI_USER_PASS" -H "accept: application/vnd.zip" -o "$OCRD_RESULTS_LOGS"
     if [ $? -ne 0 ]; then
         log_error "Failed to download the results logs."
         exit 1
@@ -424,7 +424,7 @@ main() {
     OCRD_RESULTS_LOGS="$WORKSPACE_DIR"_results_logs.zip
 
     check_required_flags
-    extract_workflow_id
+    #extract_workflow_id
 
     # Check if the zip is already given or not
     if [ -z "$ZIP" ]; then
