@@ -1,11 +1,12 @@
 #this script is done to upload ocr bagit to OLA-HD
 
+#ocr bagit path
+OCRD_RESULTS=$1
 
 #ola-hd username:password
-OLA=$1
+OLA=$2
 
-#ocr bagit path
-OCRD_RESULTS=$2
+
 
 upload_to_ola_hd() {
     echo "Uploading the results to OLA-HD..."
