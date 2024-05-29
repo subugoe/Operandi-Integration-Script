@@ -197,6 +197,19 @@ clone_mets() {
     fi
 }
 
+submit_mets_url() {
+    echo "Importing workspace from METS URL: $METS_URL..."
+    json_data=$(curl -X POST "$SERVER_ADDR/import_external_workspace?mets_url=$METS_URL&preserve_file_grps=$FILE_GROUP&mets_basename=meta.xml" -u "$OPERANDI_USER_PASS")
+    if [ $? -ne 0 ]; then
+        log_error "Failed to import the workspace from METS URL."
+        exit 1
+    fi
+    echo "$json_data"
+    workspace_id=$(echo "$json_data" | grep -o '"resource_id":"[^"]*' | cut -d '"' -f 4)
+    echo "Extracted workspace_id: $workspace_id"
+}
+
+
 # Function to create a workspace without METS
 create_workspace_without_mets() {
     echo "Creating a workspace without mets..."
@@ -223,8 +236,10 @@ create_workspace_without_mets() {
 # Function to create workspace based on the flag
 create_workspace() {
     if [ "$EXISTING_METS" == true ]; then
-        clone_mets
-        download_file_group
+        #clone_mets
+        #download_file_group
+	
+	submit_mets_url
     else
         create_workspace_without_mets
     fi
