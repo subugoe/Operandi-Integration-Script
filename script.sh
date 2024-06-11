@@ -20,14 +20,12 @@ SERVER_ADDR="http://operandi.ocr-d.de"
 FILE_GROUP="DEFAULT"
 WORKFLOW=""
 METS_URL=""
-OPERANDI_USER_PASS="" 
 IMAGE_DIR=$(pwd)/images
 EXT="jpg"
 CPUs=4
 RAM=8
 ZIP=""
 workflow_id="default_workflow"
-OLA=""
 LOCAL_OCRD=false
 CURRENT_TIME=`date +"%m%d%Y_%H%M%S"`
 WORKSPACE_DIR="ws_$CURRENT_TIME"
@@ -55,7 +53,7 @@ while getopts ":s:f:m:u:w:i:c:r:n:elz:o:" opt; do
         r) RAM="$OPTARG" ;;
         n) WORKFLOW="$OPTARG" ;;
         z) ZIP="$OPTARG" ;;
-        o) OLA="$OPTARG" ;;
+        o) OLA_USR="$OPTARG" ;;
         l) LOCAL_OCRD=true ;;
         \?) echo "Invalid option: -$OPTARG" >&2; exit 1 ;;
         :) echo "Option -$OPTARG requires an argument." >&2; exit 1 ;;
@@ -392,7 +390,7 @@ download_results_logs() {
 # Function to download results
 upload_to_ola_hd() {
     echo "Uploading the results to OLA-HD..."
-    curl -X POST 141.5.99.53/api/bag -u "$OLA" -H 'content-type: multipart/form-data' -F file=@"$OCRD_RESULTS"
+    curl -X POST 141.5.99.53/api/bag -u "$OLA_USR" -H 'content-type: multipart/form-data' -F file=@"$OCRD_RESULTS"
     if [ $? -ne 0 ]; then
         log_error "Failed to download the results."
         exit 1
@@ -474,7 +472,7 @@ main() {
         mark_step_completed "check_job_status"
     fi
 
-    if [ ! -z "$OLA" ]; then
+    if [ ! -z "$OLA_USR" ]; then
         check_step_completion "upload_to_ola_hd" || { log_info "Uploading to OLA-HD..."; upload_to_ola_hd || { log_error "Failed to upload results to OLA-HD."; exit 1; }; }
         mark_step_completed "upload_to_ola_hd"
     fi
