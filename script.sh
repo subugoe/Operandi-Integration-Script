@@ -1,5 +1,9 @@
 #!/bin/bash
+# Get the path of the script
+SCRIPT_PATH="$(dirname "$(realpath "$0")")"
 
+# Change the current working directory to the script path
+cd "$SCRIPT_PATH"
 
 # Email settings
 SMTP_SERVER="smtp://email.gwdg.de:587"
@@ -35,6 +39,7 @@ OCRD_RESULTS_LOGS=""
 PAGES=1
 ERROR_LOG="error_log.txt"
 LOG_FILE="log_file.txt"
+OLA=false
 
 UNCOMPLETED_STEP=false
 
@@ -54,7 +59,8 @@ while getopts ":s:f:m:u:w:i:c:r:n:elz:o:" opt; do
         n) WORKFLOW="$OPTARG" ;;
         z) ZIP="$OPTARG" ;;
         o) OLA_USR="$OPTARG" ;;
-        l) LOCAL_OCRD=true ;;
+        l) LOCAL_OCRD=true 
+            OLA=true;;
         \?) echo "Invalid option: -$OPTARG" >&2; exit 1 ;;
         :) echo "Option -$OPTARG requires an argument." >&2; exit 1 ;;
     esac
@@ -185,6 +191,7 @@ extract_extension() {
 # Function to create workspace directory and clone mets file from url
 clone_mets() {
     echo "Cloning mets from URL..."
+    log_info "Cloning mets from URL..."
     if [ -n "$METS_URL" ]; then
         mkdir -p "$WORKSPACE_DIR"
         ocrd workspace -d $WORKSPACE_DIR clone "$METS_URL"
@@ -196,7 +203,8 @@ clone_mets() {
 }
 
 submit_mets_url() {
-    echo "Importing workspace from METS URL: $METS_URL..."
+    mkdir -p "$WORKSPACE_DIR"
+    log_info "Submitting METS URL: $METS_URL..."
     json_data=$(curl -X POST "$SERVER_ADDR/import_external_workspace?mets_url=$METS_URL&preserve_file_grps=$FILE_GROUP&mets_basename=meta.xml" -u "$OPERANDI_USER_PASS")
     if [ $? -ne 0 ]; then
         log_error "Failed to import the workspace from METS URL."
@@ -205,6 +213,10 @@ submit_mets_url() {
     echo "$json_data"
     workspace_id=$(echo "$json_data" | grep -o '"resource_id":"[^"]*' | cut -d '"' -f 4)
     echo "Extracted workspace_id: $workspace_id"
+    if [ -z "$workspace_id" ] ; then
+       log_error "workspace_id is empty. Response: $json_data"
+       exit 1
+    fi
 }
 
 
@@ -234,10 +246,7 @@ create_workspace_without_mets() {
 # Function to create workspace based on the flag
 create_workspace() {
     if [ "$EXISTING_METS" == true ]; then
-        #clone_mets
-        #download_file_group
-	
-	submit_mets_url
+	    submit_mets_url
     else
         create_workspace_without_mets
     fi
@@ -323,6 +332,12 @@ submit_job() {
         exit 1
     fi
     job_id=$(echo "$json_data" | grep -o '"resource_id":"[^"]*' | cut -d '"' -f 4 | head -n 1)
+    
+    if [ -z "$job_id" ] ; then
+       log_error "job_id is empty. Response: $json_data"
+       exit 1
+    fi
+    
 }
 
 # Function to use local ocrd
@@ -372,8 +387,9 @@ download_results() {
     if [ $? -ne 0 ]; then
         log_error "Failed to download the results."
         exit 1
-    fi
+    fi 
     echo "Results are available now"
+    log_info "Results are available now"
 }
 
 # Function to download results
@@ -385,11 +401,12 @@ download_results_logs() {
         exit 1
     fi
     echo "Results Logs are available now"
+    log_info "Results Logs are available now"
 }
 
 # Function to download results
 upload_to_ola_hd() {
-    echo "Uploading the results to OLA-HD..."
+    log_info "Uploading the results to OLA-HD..."
     curl -X POST 141.5.99.53/api/bag -u "$OLA_USR" -H 'content-type: multipart/form-data' -F file=@"$OCRD_RESULTS"
     if [ $? -ne 0 ]; then
         log_error "Failed to download the results."
@@ -404,7 +421,7 @@ check_job_status() {
 	sleep 30
 
 	url="$SERVER_ADDR/workflow/$workflow_id/$job_id"
-        echo "the url is: $url"
+        log_info "The job URL is: $url"
         json_data=$(curl -X GET "$url" -u "$OPERANDI_USER_PASS")
         if [ $? -ne 0 ]; then
             log_error "Failed to check for the job status."
@@ -413,19 +430,43 @@ check_job_status() {
         # Extract the current job state
         job_state=$(grep -o '"job_state":"[^"]*' <<< "$json_data" | cut -d '"' -f 4)
         echo "Current Job State: $job_state"
+        log_info "Current Job State: $job_state"
 
 	if [ "$job_state" == "SUCCESS" ]; then
-        echo "Job completed successfully."
+        log_info "Job completed successfully."
         download_results
         download_results_logs
         break
     fi
 
 	if [ "$job_state" == "FAILED" ]; then
-        echo "Job failed"
+        log_info "Job failed"
         break
     fi
     done
+}
+
+create_zip_from_url() {
+    clone_mets
+    download_file_group
+    generate_ocrd_zip
+    validate_ocrd_zip
+}
+
+execute_step() {
+    local step_name="$1"
+
+    check_step_completion "$step_name" || {
+        # The step has not been done yet, so we execute it
+        "$step_name" || {
+            # There was an error executing the function
+            log_error "Failed to execute $step_name"
+            exit 1
+        }
+        
+        # The function succeeded
+        mark_step_completed "$step_name"
+    }
 }
 
 
@@ -440,44 +481,37 @@ main() {
     #extract_workflow_id
 
     # Check if the zip is already given or not
-    if [ -z "$ZIP" ]; then
-        check_step_completion "create_workspace" || { create_workspace || { log_error "Failed to create workspace."; exit 1; }; }
-        mark_step_completed "create_workspace"
-
-        check_step_completion "generate_ocrd_zip" || { generate_ocrd_zip || { log_error "Failed to generate OCR-D zip."; exit 1; }; }
-        mark_step_completed "generate_ocrd_zip"
-
-        check_step_completion "validate_ocrd_zip" || { validate_ocrd_zip || { log_error "Validation failed. The OCR-D zip is not valid."; exit 1; }; }
-        mark_step_completed "validate_ocrd_zip"
+    if [ -z "$ZIP" ] ; then
+        execute_step "create_workspace"
+        if [ -z "$METS_URL" ] ; then
+            execute_step "generate_ocrd_zip"
+            execute_step "validate_ocrd_zip"
+        fi
     else
         WORKSPACE_DIR="${ZIP%.ocrd.zip}"
     fi
 
-    if [ "$LOCAL_OCRD" == true ]; then
-        check_step_completion "process_with_local_ocrd" || { process_with_local_ocrd || { log_error "Local OCR-D processing failed."; exit 1; }; }
-        mark_step_completed "process_with_local_ocrd"
-    else
-        check_step_completion "upload_ocrd_zip" || { upload_ocrd_zip || { log_error "Failed to upload OCR-D zip to Operandi."; exit 1; }; }
-        mark_step_completed "upload_ocrd_zip"
-
-        if [ ! -z "$WORKFLOW" ]; then
-            check_step_completion "upload_workflow" || { upload_workflow || { log_error "Failed to upload workflow to Operandi."; exit 1; }; }
-            mark_step_completed "upload_workflow"
+    if [ "$LOCAL_OCRD" == true ] ; then
+        if [ ! -z "$METS_URL" ] ; then
+            execute_step "create_zip_from_url"
         fi
-
-        check_step_completion "submit_job" || { submit_job || { log_error "Failed to submit job to Operandi."; exit 1; }; }
-        mark_step_completed "submit_job"
-
-        check_step_completion "check_job_status" || { check_job_status || { log_error "Error in job status checking."; exit 1; }; }
-        mark_step_completed "check_job_status"
+        execute_step "process_with_local_ocrd"
+    else
+        if [ -z "$METS_URL" ] ; then 
+            execute_step "upload_ocrd_zip"
+        fi
+        if [ ! -z "$WORKFLOW" ] ; then
+            execute_step "upload_workflow"
+        fi    
+            execute_step "submit_job"
+            execute_step "check_job_status"
     fi
 
-    if [ ! -z "$OLA_USR" ]; then
-        check_step_completion "upload_to_ola_hd" || { log_info "Uploading to OLA-HD..."; upload_to_ola_hd || { log_error "Failed to upload results to OLA-HD."; exit 1; }; }
-        mark_step_completed "upload_to_ola_hd"
+    if [ "$OLA" == true ] ; then
+        execute_step "upload_to_ola_hd"
     fi
     
-    if [ -n "$RECIPIENT_EMAIL" ]; then
+    if [ -n "$RECIPIENT_EMAIL" ] ; then
         echo "Sending log by email to $RECIPIENT_EMAIL..."
         send_log_by_email
     fi
