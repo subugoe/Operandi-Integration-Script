@@ -58,9 +58,9 @@ while getopts ":s:f:m:u:w:i:c:r:n:elz:o:" opt; do
         r) RAM="$OPTARG" ;;
         n) WORKFLOW="$OPTARG" ;;
         z) ZIP="$OPTARG" ;;
-        o) OLA_USR="$OPTARG" ;;
-        l) LOCAL_OCRD=true 
+        o) OLA_USR="$OPTARG"
             OLA=true;;
+        l) LOCAL_OCRD=true ;;
         \?) echo "Invalid option: -$OPTARG" >&2; exit 1 ;;
         :) echo "Option -$OPTARG requires an argument." >&2; exit 1 ;;
     esac
