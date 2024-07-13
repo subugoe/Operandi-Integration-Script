@@ -420,8 +420,8 @@ upload_to_ola_hd() {
 handle_results() {
     unzip -o "$OCRD_RESULTS" -d "$WORKSPACE_DIR"_results
     mv -f "$WORKSPACE_DIR"_results/data/* $PARENT_WORKSPACE/ocr/
-    #rm $PARENT_WORKSPACE/meta.xml
-    #mv "$WORKSPACE_DIR"_results/mets.xml $PARENT_WORKSPACE/meta.xml
+    echo "$OCRD_RESULTS" > "$PARENT_WORKSPACE/.ocrd_results_path"
+
 }
 cleanup(){
     rm -r .nextflow* work/ report* $PARENT_WORKSPACE/ocrd.log "$WORKSPACE_DIR"_local "$WORKSPACE_DIR"_results $WORKSPACE_DIR
