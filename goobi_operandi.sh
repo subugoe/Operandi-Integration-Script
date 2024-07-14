@@ -42,8 +42,8 @@ OLA=false
 
 UNCOMPLETED_STEP=false
 DOCKER_RAPPER=""
-HOST_WORKSPACE_DIR=""
 PARENT_WORKSPACE="" 
+PROCESS_TITLE=""
 
 #Get the options
 while getopts ":s:f:m:u:w:i:c:r:n:elz:o:" opt; do
@@ -230,11 +230,11 @@ create_workspace_without_mets() {
     cp -r $IMAGE_DIR/* $WORKSPACE_DIR/images
     MEDIATYPE="image/$EXT"  # the actual MIME type of the images
     cd $WORKSPACE_DIR 
-    $DOCKER_RAPPER ocrd workspace -d "/data/$(basename "$WORKSPACE_DIR")" init
-    $DOCKER_RAPPER ocrd workspace -d "/data/$(basename "$WORKSPACE_DIR")" set-id 'unique ID'
+    $DOCKER_RAPPER ocrd workspace -d "/data/$PROCESS_TITLE" init
+    $DOCKER_RAPPER ocrd workspace -d "/data/$PROCESS_TITLE" set-id 'unique ID'
     for path in images/*.$EXT; do
         base=`basename $path $EXT`;
-        $DOCKER_RAPPER ocrd workspace -d "/data/$(basename "$WORKSPACE_DIR")" add -G $FILE_GROUP -i ${FILE_GROUP}_${base} -g P_$base -m $MEDIATYPE $path
+        $DOCKER_RAPPER ocrd workspace -d "/data/$PROCESS_TITLE" add -G $FILE_GROUP -i ${FILE_GROUP}_${base} -g P_$base -m $MEDIATYPE $path
     done
  
     cd ->/dev/null
@@ -264,7 +264,7 @@ create_workspace() {
 download_file_group() {
     if [ -n "$FILE_GROUP" ]; then
         echo "Downloading the selected file group: $FILE_GROUP..."
-	    $DOCKER_RAPPER ocrd workspace -d "$HOST_WORKSPACE_DIR" find --file-grp "$FILE_GROUP" --download
+	    $DOCKER_RAPPER ocrd workspace -d "$WORKSPACE_DIR" find --file-grp "$FILE_GROUP" --download
     fi
     if [ $? -ne 0 ]; then
         log_error "Failed to download file group."
@@ -275,7 +275,7 @@ download_file_group() {
 # Function to generate OCR-D zip
 generate_ocrd_zip() {
     echo "Generating an OCR-D zip..."
-    $DOCKER_RAPPER ocrd zip bag -i "$(basename "$WORKSPACE_DIR")" -d "/data/$(basename "$WORKSPACE_DIR")"
+    $DOCKER_RAPPER ocrd zip bag -i "$PROCESS_TITLE" -d "/data/$PROCESS_TITLE"
  
     if [ $? -ne 0 ]; then
         log_error "Failed to generate the OCR-D zip."
@@ -286,7 +286,7 @@ generate_ocrd_zip() {
 # Function to validate OCR-D zip
 validate_ocrd_zip() {
     echo "Validating the OCR-D zip..."
-    $DOCKER_RAPPER ocrd zip validate "/data/$(basename "$WORKSPACE_DIR").ocrd.zip"
+    $DOCKER_RAPPER ocrd zip validate "/data/$PROCESS_TITLE.ocrd.zip"
     if [ $? -ne 0 ]; then
         log_error "Validation failed. The OCR-D zip is not valid."
         exit 1
@@ -346,7 +346,7 @@ submit_job() {
 process_with_local_ocrd() {
 
     WORKSPACE_DIR_LOCAL="$WORKSPACE_DIR"_local/data
-    WS_LOCAL_OCRD_PATH="/data/$(basename "$WORKSPACE_DIR")_local/data"
+    WS_LOCAL_OCRD_PATH="/data/$(PROCESS_TITLE)_local/data"
     METS_SERVER_LOG="${WS_LOCAL_OCRD_PATH}/mets_server.log"
     SOCKET_PATH="${WS_LOCAL_OCRD_PATH}/mets_server.sock"
     unzip -o "$WORKSPACE_DIR".ocrd.zip -d "$WORKSPACE_DIR"_local
@@ -372,11 +372,12 @@ process_with_local_ocrd() {
     fi
     # Stop the mets server started above
     #$DOCKER_RAPPER ocrd workspace -U "${SOCKET_PATH}" -d "${WORKSPACE_DIR_LOCAL}" server stop
-    $DOCKER_RAPPER ocrd zip bag -i "$(basename "$WORKSPACE_DIR")" -d "$WS_LOCAL_OCRD_PATH"
+    $DOCKER_RAPPER ocrd zip bag -i "$PROCESS_TITLE" -d "$WS_LOCAL_OCRD_PATH"
     OCRD_RESULTS="$WORKSPACE_DIR_LOCAL".ocrd.zip
     mv $OCRD_RESULTS $PARENT_WORKSPACE/
     OCRD_RESULTS="$PARENT_WORKSPACE/data.ocrd.zip"
     handle_results
+    
 }
 
 
@@ -403,6 +404,7 @@ download_results_logs() {
     echo "Results Logs are available now"
     log_info "Results Logs are available now"
     handle_results
+    
 }
 
 # Function to download results
@@ -417,8 +419,10 @@ upload_to_ola_hd() {
 # Function to handle results for kitodo
 handle_results() {
     unzip -o "$OCRD_RESULTS" -d "$WORKSPACE_DIR"_results
-    mv -f "$WORKSPACE_DIR"_results/data/*ALTO*/* $PARENT_WORKSPACE/ocr/alto/
+    mkdir -p $PARENT_WORKSPACE/ocr/$(PROCESS_TITLE)_alto
+    mv -f "$WORKSPACE_DIR"_results/data/*ALTO*/* $PARENT_WORKSPACE/ocr/$(PROCESS_TITLE)_alto/
     echo "$OCRD_RESULTS" > "$PARENT_WORKSPACE/.ocrd_results_path"
+
 }
 cleanup(){
     rm -r .nextflow* work/ report* $PARENT_WORKSPACE/ocrd.log "$WORKSPACE_DIR"_local "$WORKSPACE_DIR"_results $WORKSPACE_DIR
@@ -484,13 +488,13 @@ execute_step() {
 # Main script
 main() {
     #remove the / from the end of server address
+    log_info "workspace:  $WORKSPACE_DIR"
     SERVER_ADDR="${SERVER_ADDR%/}"
+    PROCESS_TITLE=$(basename "$WORKSPACE_DIR")
     OCRD_RESULTS="$WORKSPACE_DIR"_results.zip
     OCRD_RESULTS_LOGS="$WORKSPACE_DIR"_results_logs.zip
     PARENT_WORKSPACE=$(dirname "$WORKSPACE_DIR")
-    DOCKER_RAPPER="docker run --rm -u $(id -u) -v $CONFIG_PATH/Operandi-Integration-Script/ocrd-models:/ocrd-models -v $CONFIG_PATH/${PARENT_WORKSPACE#/usr/local/kitodo/}:/data -- ocrd/all:maximum"
-    HOST_WORKSPACE_DIR="$CONFIG_PATH/${WORKSPACE_DIR#/usr/local/kitodo/}"
-    echo "DOCKER_RAPPER: $DOCKER_RAPPER"
+    DOCKER_RAPPER="docker run --rm -u $(id -u) -v ./ocrd-models:/ocrd-models -v $PARENT_WORKSPACE:/data -- ocrd/all:maximum"
     check_required_flags
     #extract_workflow_id
 
@@ -529,9 +533,8 @@ main() {
         echo "Sending log by email to $RECIPIENT_EMAIL..."
         send_log_by_email
     fi
-    
-    cleanup
 
+    cleanup
 }
 
 main
