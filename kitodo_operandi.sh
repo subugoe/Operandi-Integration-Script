@@ -44,6 +44,7 @@ UNCOMPLETED_STEP=false
 DOCKER_RAPPER=""
 HOST_WORKSPACE_DIR=""
 PARENT_WORKSPACE="" 
+UPLOAD_WF=false
 
 #Get the options
 while getopts ":s:f:m:u:w:i:c:r:n:elz:o:" opt; do
@@ -57,7 +58,8 @@ while getopts ":s:f:m:u:w:i:c:r:n:elz:o:" opt; do
         i) IMAGE_DIR="$OPTARG" ;;
         c) CPUs="$OPTARG" ;;
         r) RAM="$OPTARG" ;;
-        n) WORKFLOW="$OPTARG" ;;
+        n) WORKFLOW="$OPTARG" 
+        UPLOAD_WF=true;;
         z) ZIP="$OPTARG" ;;
         o) OLA_USR="$OPTARG"
 	   OLA=true;;
@@ -124,6 +126,7 @@ log_info() {
 # Function to log errors with timestamp and workspace name
 log_error() {
     local error_message="$1"
+    rm -r $SCRIPT_PATH/work
     echo "[ERROR] $(date '+%Y-%m-%d %H:%M:%S') - Workspace: $WORKSPACE_DIR - $error_message" >> "$ERROR_LOG"
     echo "[ERROR] $(date '+%Y-%m-%d %H:%M:%S') - Workspace: $WORKSPACE_DIR - $error_message" >> "$LOG_FILE"
     if [ -n "$RECIPIENT_EMAIL" ]; then
@@ -421,7 +424,7 @@ handle_results() {
     echo "$OCRD_RESULTS" > "$PARENT_WORKSPACE/.ocrd_results_path"
 }
 cleanup(){
-    rm -r .nextflow* work/ report* $PARENT_WORKSPACE/ocrd.log "$WORKSPACE_DIR"_local "$WORKSPACE_DIR"_results $WORKSPACE_DIR
+    rm -r .nextflow* tmp/ work/ report* $PARENT_WORKSPACE/ocrd.log "$WORKSPACE_DIR"_local "$WORKSPACE_DIR"_results $WORKSPACE_DIR
 }
 
 
@@ -488,7 +491,7 @@ main() {
     OCRD_RESULTS="$WORKSPACE_DIR"_results.zip
     OCRD_RESULTS_LOGS="$WORKSPACE_DIR"_results_logs.zip
     PARENT_WORKSPACE=$(dirname "$WORKSPACE_DIR")
-    DOCKER_RAPPER="docker run --rm -u $(id -u) -v $CONFIG_PATH/Operandi-Integration-Script/ocrd-models:/ocrd-models -v $CONFIG_PATH/${PARENT_WORKSPACE#/usr/local/kitodo/}:/data -- ocrd/all:maximum"
+    DOCKER_RAPPER="docker run --rm -u $(id -u) -v $CONFIG_PATH/Operandi-Integration-Script/tmp:/tmp -v $CONFIG_PATH/Operandi-Integration-Script/ocrd-models:/ocrd-models -v $CONFIG_PATH/${PARENT_WORKSPACE#/usr/local/kitodo/}:/data -- ocrd/all:maximum"
     HOST_WORKSPACE_DIR="$CONFIG_PATH/${WORKSPACE_DIR#/usr/local/kitodo/}"
     echo "DOCKER_RAPPER: $DOCKER_RAPPER"
     check_required_flags
@@ -514,7 +517,7 @@ main() {
         if [ -z "$METS_URL" ] ; then 
             execute_step "upload_ocrd_zip"
         fi
-        if [ ! -z "$WORKFLOW" ] ; then
+        if [ "$UPLOAD_WF" == true ] ; then
             execute_step "upload_workflow"
         fi    
             execute_step "submit_job"
