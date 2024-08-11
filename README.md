@@ -2,6 +2,11 @@
 # Operandi Integration Script
 
 This script is made to integrate Operandi with other tools such as Goobi and Kitodo. Also, it can be used as an interface to use Operandi services or use local OCR-D processing. 
+`script_native.sh` is for terminal use with OCR-D native installation.
+`script_docker.sh` is for terminal use with OCR-D docker installation.
+`goobi_operandi.sh` is used for Operandi-Goobi integration.
+`kitodo_operandi.sh` is used for Operandi-Kitodo integration.
+
 
 
 ## Procedures
