@@ -232,7 +232,7 @@ create_workspace_without_mets() {
     cd $WORKSPACE_DIR
 
     for path in images/*.$EXT; do
-        base=`basename $path $EXT`;
+        base=`basename $path .$EXT`;
         ocrd workspace add -G $FILE_GROUP -i ${FILE_GROUP}_${base} -g P_$base -m $MEDIATYPE $path
     done
     cd ->/dev/null
