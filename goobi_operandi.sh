@@ -349,7 +349,7 @@ submit_job() {
 process_with_local_ocrd() {
 
     WORKSPACE_DIR_LOCAL="$WORKSPACE_DIR"_local/data
-    WS_LOCAL_OCRD_PATH="/data/$(PROCESS_TITLE)_local/data"
+    WS_LOCAL_OCRD_PATH="/data/"$PROCESS_TITLE"_local/data"
     METS_SERVER_LOG="${WS_LOCAL_OCRD_PATH}/mets_server.log"
     SOCKET_PATH="${WS_LOCAL_OCRD_PATH}/mets_server.sock"
     unzip -o "$WORKSPACE_DIR".ocrd.zip -d "$WORKSPACE_DIR"_local
@@ -421,9 +421,10 @@ upload_to_ola_hd() {
 }
 # Function to handle results for kitodo
 handle_results() {
+    echo "Process title is $PROCESS_TITLE"
     unzip -o "$OCRD_RESULTS" -d "$WORKSPACE_DIR"_results
-    mkdir -p $PARENT_WORKSPACE/ocr/$(PROCESS_TITLE)_alto
-    mv -f "$WORKSPACE_DIR"_results/data/*ALTO*/* $PARENT_WORKSPACE/ocr/$(PROCESS_TITLE)_alto/
+    mkdir -p $PARENT_WORKSPACE/ocr/"$PROCESS_TITLE"_alto
+    mv -f "$WORKSPACE_DIR"_results/data/*ALTO*/* $PARENT_WORKSPACE/ocr/"$PROCESS_TITLE"_alto/
     echo "$OCRD_RESULTS" > "$PARENT_WORKSPACE/.ocrd_results_path"
 
 }

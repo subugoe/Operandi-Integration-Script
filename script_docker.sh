@@ -25,8 +25,8 @@ WORKFLOW="default_workflow.nf"
 METS_URL=""
 IMAGE_DIR=$(pwd)/images
 EXT="jpg"
-CPUs=4
-RAM=8
+CPUs=8
+RAM=64
 ZIP=""
 workflow_id="default_workflow"
 LOCAL_OCRD=false
@@ -349,7 +349,7 @@ submit_job() {
 process_with_local_ocrd() {
 
     WORKSPACE_DIR_LOCAL="$WORKSPACE_DIR"_local/data
-    WS_LOCAL_OCRD_PATH="/data/$(PROCESS_TITLE)_local/data"
+    WS_LOCAL_OCRD_PATH="/data/"$PROCESS_TITLE"_local/data"
     METS_SERVER_LOG="${WS_LOCAL_OCRD_PATH}/mets_server.log"
     SOCKET_PATH="${WS_LOCAL_OCRD_PATH}/mets_server.sock"
     unzip -o "$WORKSPACE_DIR".ocrd.zip -d "$WORKSPACE_DIR"_local
