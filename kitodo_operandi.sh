@@ -420,11 +420,11 @@ upload_to_ola_hd() {
 # Function to handle results for kitodo
 handle_results() {
     unzip -o "$OCRD_RESULTS" -d "$WORKSPACE_DIR"_results
-    mv -f "$WORKSPACE_DIR"_results/data/*ALTO*/* $PARENT_WORKSPACE/ocr/alto/
-    echo "$OCRD_RESULTS" > "$PARENT_WORKSPACE/.ocrd_results_path"
+    mv -f "$WORKSPACE_DIR"_results/data/* $PARENT_WORKSPACE/ocr/
 }
+
 cleanup(){
-    rm -r .nextflow* tmp/ work/ report* $PARENT_WORKSPACE/ocrd.log "$WORKSPACE_DIR"_local "$WORKSPACE_DIR"_results $WORKSPACE_DIR
+    rm -r .nextflow* tmp/ work/ report* $PARENT_WORKSPACE/ocrd.log "$WORKSPACE_DIR"_local "$WORKSPACE_DIR"_results $WORKSPACE_DIR $OCRD_RESULTS
 }
 
 

@@ -6,6 +6,7 @@ This script is made to integrate Operandi with other tools such as Goobi and Kit
 `script_docker.sh` is for terminal use with OCR-D docker installation.
 `goobi_operandi.sh` is used for Operandi-Goobi integration.
 `kitodo_operandi.sh` is used for Operandi-Kitodo integration.
+`upload_to_ola_hd.sh` is used for OLA_HD-Kitodo-Goobi integration.
 
 
 

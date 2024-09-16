@@ -25,8 +25,8 @@ WORKFLOW="default_workflow.nf"
 METS_URL=""
 IMAGE_DIR=$(pwd)/images
 EXT="jpg"
-CPUs=4
-RAM=8
+CPUs=8
+RAM=64
 ZIP=""
 workflow_id="default_workflow"
 LOCAL_OCRD=false
@@ -423,13 +423,13 @@ upload_to_ola_hd() {
 handle_results() {
     echo "Process title is $PROCESS_TITLE"
     unzip -o "$OCRD_RESULTS" -d "$WORKSPACE_DIR"_results
-    mkdir -p $PARENT_WORKSPACE/ocr/"$PROCESS_TITLE"_alto
-    mv -f "$WORKSPACE_DIR"_results/data/*ALTO*/* $PARENT_WORKSPACE/ocr/"$PROCESS_TITLE"_alto/
-    echo "$OCRD_RESULTS" > "$PARENT_WORKSPACE/.ocrd_results_path"
+    mkdir -p $PARENT_WORKSPACE/ocr/
+    mv -f "$WORKSPACE_DIR"_results/data/* $PARENT_WORKSPACE/ocr/
 
 }
+
 cleanup(){
-    rm -r .nextflow* tmp/ work/ report* $PARENT_WORKSPACE/ocrd.log "$WORKSPACE_DIR"_local "$WORKSPACE_DIR"_results $WORKSPACE_DIR
+    rm -r .nextflow* tmp/ work/ report* $PARENT_WORKSPACE/ocrd.log "$WORKSPACE_DIR"_local "$WORKSPACE_DIR"_results $WORKSPACE_DIR $OCRD_RESULTS
 }
 
 
