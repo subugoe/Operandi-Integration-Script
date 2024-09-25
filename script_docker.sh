@@ -45,6 +45,7 @@ DOCKER_RAPPER=""
 PARENT_WORKSPACE="" 
 PROCESS_TITLE=""
 UPLOAD_WF=false
+LAREX_VIEW=true
 
 #Get the options
 while getopts ":s:f:m:u:w:i:c:r:n:elz:o:" opt; do
@@ -57,6 +58,7 @@ while getopts ":s:f:m:u:w:i:c:r:n:elz:o:" opt; do
         e) EXISTING_METS=true ;;
         i) IMAGE_DIR="$OPTARG" ;;
         c) CPUs="$OPTARG" ;;
+        v) LAREX_VIEW=false ;;
         r) RAM="$OPTARG" ;;
         n) WORKFLOW="$OPTARG" 
         UPLOAD_WF=true;;
@@ -515,6 +517,10 @@ main() {
         fi    
             execute_step "submit_job"
             execute_step "check_job_status"
+    fi
+
+    if [ "$LAREX_VIEW" == true ] ; then
+        ./view_in_larex.sh $OCRD_RESULTS $FILE_GROUP
     fi
 
     if [ "$OLA" == true ] ; then

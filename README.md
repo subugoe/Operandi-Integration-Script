@@ -1,12 +1,30 @@
 
 # Operandi Integration Script
 
-This script is made to integrate Operandi with other tools such as Goobi and Kitodo. Also, it can be used as an interface to use Operandi services or use local OCR-D processing. 
+This script is made to integrate Operandi with other tools such as Goobi and Kitodo. Also, it can be used as an interface to use Operandi services or use local OCR-D processing. It also supports LAREX viewer to display the PageXML Results. 
 `script_native.sh` is for terminal use with OCR-D native installation.
 `script_docker.sh` is for terminal use with OCR-D docker installation.
 `goobi_operandi.sh` is used for Operandi-Goobi integration.
 `kitodo_operandi.sh` is used for Operandi-Kitodo integration.
 `upload_to_ola_hd.sh` is used for OLA_HD-Kitodo-Goobi integration.
+
+
+
+## Usage
+All values can be set using the corresponding flags unless you want to use the default values. The script is so dynamic, you only need to know which values are required in your case and set them by the corresponding flags. 
+
+Provided below are some scenarios but no all possible scenarios.
+
+### Usage Case 1: You have mets file or URL.
+`./script_docker.sh -e -u <user:pass> -m <mets_url or mets_file_path> -w <workspace_name or path>`
+### Usage Case 2: You only have the images. 
+`./script_docker.sh -u <user:pass> -i <images_directory> -w <workspace_name or path>`
+### Usage Case 3: You have OCRD ZIP.
+`./script_docker.sh -u <user:pass> -z <workspace.ocrd.zip>`
+### Usage Case 4: To use OCR-D on your local machine in any of the above cases use -l
+Example: `./script_docker.sh -i <images> -l -w <workspace_name or path>`
+
+The results will be displayable at http://localhost:1476/Larex/
 
 
 
@@ -27,6 +45,7 @@ This script is made to integrate Operandi with other tools such as Goobi and Kit
 
 - `-e [no arguments]` to create a workspace from an existing mets file or mets URL.
 - `-l [no arguments]` to use the local OCR-D processing.
+- `-v [no arguments]` to control viewing the results in LAREX. The default value is `true`. Use the flag to switch it off. 
 - `-o [required an argument. Ex: ola_user:ola_pass]` to upload the results to OLA-HD and set OLA-HD username and password.
 - `-s [requires an argument. Ex: http://operandi.ocr-d.de]` to set the server address. 
 - `-u [required an argument. Ex: user:pass]` to set operandi user and password.
@@ -40,15 +59,17 @@ This script is made to integrate Operandi with other tools such as Goobi and Kit
 - `-z [requires an argument. Ex: workspace.ocrd.zip]` to upload an OCR-D zip file to Operandi directly and get the results.
 
 
+
 ## Default Values and The Corresponding Flags
 
 - `-w` Workspace Directory= `ws_<current_time_stamp>` 
 - `-s` Server Address = `http://operandi.ocr-d.de`
 - `-f` File Group= `DEFAULT`
-- `-n` Workflow= `default_workflow`
+- `-n` Workflow= `default_workflow.nf`
 - `-i` Images Directory= `$(pwd)/images`
-- `-c` CPUs= `4`
-- `-r` RAM= `8`
+- `-c` CPUs= `8`
+- `-r` RAM= `64`
+- `-v` LAREX_VIEW= `true`
 
 
 
@@ -66,35 +87,4 @@ SENDER_EMAIL="sender@example.com"
 SENDER_PASSWORD="your_password"
 RECIPIENT_EMAIL="recipient@example.com"
 ```
-
-## Usage
-All values can be set using the corresponding flags unless you want to use the default values. The script is so dynamic, you only need to know which values are required in your case and set them by the corresponding flags. 
-
-Provided below are some scenarios but no all possible scenarios.
-
-### Scenario 1: 
-To create a workspace from existing mets and get the results:
-#### Case 1: with mets URL
-`./script.sh -e -u <user:pass> -m <mets_url>`
-#### Case 2: with mets.xml file stored in the workspace
-`./script.sh -e -u <user:pass>`
-### Scenario 2: 
-To create a workspace from only the images and don't have mets file for those images
-`./script.sh -u <user:pass> -i <images>`
-### Scenario 3: 
-To use an already created OCR-D zip file directly and get the results use -z
-`./script.sh -u <user:pass> -z <workspace.ocrd.zip>`
-### Scenario 4: 
-To use the local OCR-D in any of the above cases use -l and -n to set the nextflow script 
-This is an example of a nextflow that can be used in this case:
-https://github.com/subugoe/operandi/blob/main/src/utils/operandi_utils/hpc/nextflow_workflows/default_workflow.nf
-`./script.sh -i <images> -l -n <default_workflow.nf>`
-### Scenario 5: 
-If you want to upload the results to OLA-HD use -o to insert OLA-HD username and password
-`./script.sh -e -u <user:pass> -o <ola_user:ola_pass>`
-### Other Usages:
-#### If you want to upload a new workflow to Operandi use -n
-`./script.sh -e -u <user:pass> -n <default_workflow.nf>`
-#### If you don't want to use default values, you can set any value by its flag
-`./script.sh -e -u <user:pass> -w <workspace_dir> -n <default_workflow.nf> -s <http://localhost:8000> -f <MAX> -c <8> -r <32>`
 
