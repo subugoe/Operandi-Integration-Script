@@ -246,7 +246,9 @@ create_workspace_without_mets() {
 # Function to create workspace based on the flag
 create_workspace() {
     if [ "$EXISTING_METS" == true ]; then
-	    submit_mets_url
+        if [ "$LOCAL_OCRD" != true ] ; then
+            submit_mets_url
+        fi
     else
         create_workspace_without_mets
     fi
@@ -472,6 +474,10 @@ execute_step() {
 
 # Main script
 main() {
+    
+    if [[ "$WORKSPACE_DIR" != /* ]]; then
+        WORKSPACE_DIR="$PWD/$WORKSPACE_DIR"
+    fi
     #remove the / from the end of server address
     SERVER_ADDR="${SERVER_ADDR%/}"
     OCRD_RESULTS="$WORKSPACE_DIR"_results.zip

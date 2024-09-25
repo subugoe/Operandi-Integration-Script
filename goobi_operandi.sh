@@ -199,7 +199,7 @@ clone_mets() {
     log_info "Cloning mets from URL..."
     if [ -n "$METS_URL" ]; then
         mkdir -p "$WORKSPACE_DIR"
-        ocrd workspace -d $WORKSPACE_DIR clone "$METS_URL"
+        $DOCKER_RAPPER ocrd workspace -d "/data/$PROCESS_TITLE" clone "$METS_URL"
         if [ $? -ne 0 ]; then
             log_error "Failed to create the workspace from METS."
             exit 1
@@ -251,7 +251,9 @@ create_workspace_without_mets() {
 # Function to create workspace based on the flag
 create_workspace() {
     if [ "$EXISTING_METS" == true ]; then
-	    submit_mets_url
+        if [ "$LOCAL_OCRD" != true ] ; then
+            submit_mets_url
+        fi
     else
         create_workspace_without_mets
     fi
@@ -267,7 +269,7 @@ create_workspace() {
 download_file_group() {
     if [ -n "$FILE_GROUP" ]; then
         echo "Downloading the selected file group: $FILE_GROUP..."
-	    $DOCKER_RAPPER ocrd workspace -d "$WORKSPACE_DIR" find --file-grp "$FILE_GROUP" --download
+	    $DOCKER_RAPPER ocrd workspace -d "/data/$PROCESS_TITLE" find --file-grp "$FILE_GROUP" --download
     fi
     if [ $? -ne 0 ]; then
         log_error "Failed to download file group."
@@ -491,6 +493,9 @@ execute_step() {
 
 # Main script
 main() {
+    if [[ "$WORKSPACE_DIR" != /* ]]; then
+        WORKSPACE_DIR="$PWD/$WORKSPACE_DIR"
+    fi
     #remove the / from the end of server address
     log_info "workspace:  $WORKSPACE_DIR"
     SERVER_ADDR="${SERVER_ADDR%/}"
