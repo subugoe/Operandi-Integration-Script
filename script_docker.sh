@@ -383,6 +383,8 @@ process_with_local_ocrd() {
     OCRD_RESULTS="$WORKSPACE_DIR_LOCAL".ocrd.zip
     mv $OCRD_RESULTS $PARENT_WORKSPACE/
     OCRD_RESULTS="$PARENT_WORKSPACE/data.ocrd.zip"
+    mv $OCRD_RESULTS $PARENT_WORKSPACE/$PROCESS_TITLE"_results.zip"
+    OCRD_RESULTS=$PARENT_WORKSPACE/$PROCESS_TITLE"_results.zip"
 }
 
 
