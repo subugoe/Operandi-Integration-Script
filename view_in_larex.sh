@@ -11,6 +11,7 @@ WORKSPACE="${1%.*}"
 FILE_GROUP=$2
 unzip -o $WORKSPACE -d "$WORKSPACE"_larex
 
+
 # rename the files by removing OCR-D-OCR_
 for FILE in "$WORKSPACE"_larex/data/OCR-D-OCR/OCR-D-OCR_*.xml; do
     if [ ! -e "$FILE" ]; then
@@ -18,6 +19,40 @@ for FILE in "$WORKSPACE"_larex/data/OCR-D-OCR/OCR-D-OCR_*.xml; do
         break
     fi
     NEW_FILE="${FILE/OCR-D-OCR_/}"
+    mv "$FILE" "$NEW_FILE"
+    echo "Renamed '$FILE' to '$NEW_FILE'"
+done
+
+# rename the files by removing _OCR-D-OCR
+for FILE in "$WORKSPACE"_larex/data/OCR-D-OCR/*_OCR-D-OCR.xml; do
+    if [ ! -e "$FILE" ]; then
+        echo "No files matching the pattern in '$DIRECTORY'."
+        break
+    fi
+    NEW_FILE="${FILE/_OCR-D-OCR/}"
+    mv "$FILE" "$NEW_FILE"
+    echo "Renamed '$FILE' to '$NEW_FILE'"
+done
+
+
+# rename the images by removing _FILE_GROUP
+for FILE in "$WORKSPACE"_larex/data/$FILE_GROUP/*_$FILE_GROUP.*; do
+    if [ ! -e "$FILE" ]; then
+        echo "No files matching the pattern in '$DIRECTORY'."
+        break
+    fi
+    NEW_FILE="${FILE/_$FILE_GROUP/}"
+    mv "$FILE" "$NEW_FILE"
+    echo "Renamed '$FILE' to '$NEW_FILE'"
+done
+
+# rename the images by removing FILE_GROU_
+for FILE in "$WORKSPACE"_larex/data/$FILE_GROUP/${FILE_GROUP}_*; do
+    if [ ! -e "$FILE" ]; then
+        echo "No files matching the pattern in '$DIRECTORY'."
+        break
+    fi
+    NEW_FILE="${FILE/${FILE_GROUP}_/}"
     mv "$FILE" "$NEW_FILE"
     echo "Renamed '$FILE' to '$NEW_FILE'"
 done
