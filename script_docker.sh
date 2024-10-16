@@ -39,6 +39,7 @@ PAGES=1
 ERROR_LOG="error_log.txt"
 LOG_FILE="log_file.txt"
 OLA=false
+CLEAN_RESULTS=true
 
 UNCOMPLETED_STEP=false
 DOCKER_RAPPER=""
@@ -450,8 +451,28 @@ check_job_status() {
 	if [ "$job_state" == "FAILED" ]; then
         log_info "Job failed"
         break
-    fi
+    fi 
     done
+}
+
+clean_results(){
+    unzip -o $OCRD_RESULTS -d ${WORKSPACE_DIR}_cleaned_results
+
+    file_groups=$(docker run --rm -u $(id -u) -v $SCRIPT_PATH/tmp:/tmp -v $SCRIPT_PATH/ocrd-models:/ocrd-models -v ${WORKSPACE_DIR}_cleaned_results/data:/data -- ocrd/all:maximum ocrd workspace list-group)
+    # Loop over each line in the output and print it
+    while IFS= read -r group; do
+        # Check if the group is not DEFAULT or OCR-D-OCR
+    if [[ "$group" != $FILE_GROUP && "$group" != "OCR-D-OCR" ]]; then
+        # Remove the group using the specified command
+        echo "Removing file group: $group"
+        $DOCKER_RAPPER ocrd workspace -d "/data/${PROCESS_TITLE}_cleaned_results/data" remove-group -r -f "$group"
+    fi
+    done <<< "$file_groups"
+
+    $DOCKER_RAPPER ocrd zip bag -i "$PROCESS_TITLE" -d /data/${PROCESS_TITLE}_cleaned_results/data
+    mv $OCRD_RESULTS ${PROCESS_TITLE}_uncleaned.zip
+    mv ${WORKSPACE_DIR}_cleaned_results/data.ocrd.zip $OCRD_RESULTS
+    rm -r ${WORKSPACE_DIR}_cleaned_results
 }
 
 create_zip_from_url() {
@@ -519,6 +540,10 @@ main() {
         fi    
             execute_step "submit_job"
             execute_step "check_job_status"
+    fi
+
+    if [ "$CLEAN_RESULTS" == true ] ; then
+        execute_step "clean_results"
     fi
 
     if [ "$LAREX_VIEW" == true ] ; then
