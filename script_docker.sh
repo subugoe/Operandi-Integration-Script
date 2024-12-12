@@ -39,7 +39,7 @@ PAGES=1
 ERROR_LOG="error_log.txt"
 LOG_FILE="log_file.txt"
 OLA=false
-CLEAN_RESULTS=true
+CLEAN_RESULTS=false
 
 UNCOMPLETED_STEP=false
 DOCKER_RAPPER=""
@@ -369,7 +369,7 @@ process_with_local_ocrd() {
     --mets "${WS_LOCAL_OCRD_PATH}/mets.xml" \
     --mets_socket "${SOCKET_PATH}" \
     --workspace_dir "${WS_LOCAL_OCRD_PATH}" \
-    --singularity_wrapper "$DOCKER_RAPPER" \
+    --singularity_wrapper "docker run --rm -u $(id -u) -v $SCRIPT_PATH/tmp:/tmp -v $SCRIPT_PATH/ocrd-models:/ocrd-models -v $PARENT_WORKSPACE:/data -- ocrd/all:maximum" \
     --pages "${PAGES}" \
     --cpus "${CPUs}" \
     --ram "${RAM}" 
@@ -511,7 +511,7 @@ main() {
     OCRD_RESULTS="$WORKSPACE_DIR"_results.zip
     OCRD_RESULTS_LOGS="$WORKSPACE_DIR"_results_logs.zip
     PARENT_WORKSPACE=$(dirname "$WORKSPACE_DIR")
-    DOCKER_RAPPER="docker run --rm -u $(id -u) -v $SCRIPT_PATH/tmp:/tmp -v $SCRIPT_PATH/ocrd-models:/ocrd-models -v $PARENT_WORKSPACE:/data -- ocrd/all:maximum"
+    DOCKER_RAPPER="docker run --rm -u $(id -u) -v $SCRIPT_PATH/tmp:/tmp -v $PARENT_WORKSPACE:/data -- ocrd/core"
     check_required_flags
     #extract_workflow_id
 
