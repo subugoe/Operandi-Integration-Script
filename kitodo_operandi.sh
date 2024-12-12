@@ -366,7 +366,7 @@ process_with_local_ocrd() {
     --mets "${WS_LOCAL_OCRD_PATH}/mets.xml" \
     --mets_socket "${SOCKET_PATH}" \
     --workspace_dir "${WS_LOCAL_OCRD_PATH}" \
-    --singularity_wrapper "$DOCKER_RAPPER" \
+    --singularity_wrapper "docker run --rm -u $(id -u) -v $CONFIG_PATH/Operandi-Integration-Script/tmp:/tmp -v $CONFIG_PATH/Operandi-Integration-Script/ocrd-models:/ocrd-models -v $CONFIG_PATH/${PARENT_WORKSPACE#/usr/local/kitodo/}:/data -- ocrd/all:maximum" \
     --pages "${PAGES}" \
     --cpus "${CPUs}" \
     --ram "${RAM}" 
@@ -499,7 +499,7 @@ main() {
     OCRD_RESULTS="$WORKSPACE_DIR"_results.zip
     OCRD_RESULTS_LOGS="$WORKSPACE_DIR"_results_logs.zip
     PARENT_WORKSPACE=$(dirname "$WORKSPACE_DIR")
-    DOCKER_RAPPER="docker run --rm -u $(id -u) -v $CONFIG_PATH/Operandi-Integration-Script/tmp:/tmp -v $CONFIG_PATH/Operandi-Integration-Script/ocrd-models:/ocrd-models -v $CONFIG_PATH/${PARENT_WORKSPACE#/usr/local/kitodo/}:/data -- ocrd/all:maximum"
+    DOCKER_RAPPER="docker run --rm -u $(id -u) -v $CONFIG_PATH/Operandi-Integration-Script/tmp:/tmp -v $CONFIG_PATH/${PARENT_WORKSPACE#/usr/local/kitodo/}:/data -- ocrd/core"
     echo "DOCKER_RAPPER: $DOCKER_RAPPER"
     check_required_flags
     #extract_workflow_id
