@@ -39,6 +39,8 @@ PAGES=1
 ERROR_LOG="error_log.txt"
 LOG_FILE="log_file.txt"
 OLA=false
+OLA_HD_SERVER="141.5.99.53"
+
 
 UNCOMPLETED_STEP=false
 DOCKER_RAPPER=""
@@ -414,16 +416,33 @@ download_results_logs() {
     cleanup
 }
 
-# Function to download results
+# Function to delete the workspace
+delete_workspace() {
+    echo "Deleting the workspace..."
+    curl -X DELETE "$SERVER_ADDR/workspace/$workspace_id" -u "$OPERANDI_USER_PASS"
+    if [ $? -ne 0 ]; then
+        log_error "Failed to delete the workspace."
+        exit 1
+    fi
+    echo "Workspace deleted successfully"
+    log_info "Workspace deleted successfully"
+}
+
+# Function to upload to OLA-HD
 upload_to_ola_hd() {
     log_info "Uploading the results to OLA-HD..."
-    curl -X POST 141.5.99.53/api/bag -u "$OLA_USR" -H 'content-type: multipart/form-data' -F file=@"$OCRD_RESULTS"
+    json_data=$(curl -X POST $OLA_HD_SERVER/api/bag -u "$OLA_USR" -H 'content-type: multipart/form-data' -F file=@"$OCRD_RESULTS")
+
+    # Extract the PID value
+    ola_pid=$(echo "$json_data" | grep -o '"pid":"[^"]*' | cut -d '"' -f 4 | head -n 1)
+    echo "$(basename "$WORKSPACE_DIR") >>> $OLA_HD_SERVER/search-detail?id=$ola_pid"  >> "ola_hd_pids.txt"
+    
     if [ $? -ne 0 ]; then
         log_error "Failed to download the results."
         exit 1
     fi
 }
-# Function to handle results for kitodo
+# Function to handle results for goobi
 handle_results() {
     echo "Process title is $PROCESS_TITLE"
     unzip -o "$OCRD_RESULTS" -d "$WORKSPACE_DIR"_results
@@ -459,6 +478,7 @@ check_job_status() {
         log_info "Job completed successfully."
         download_results
         download_results_logs
+        delete_workspace
         break
     fi
 

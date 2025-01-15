@@ -40,13 +40,14 @@ ERROR_LOG="error_log.txt"
 LOG_FILE="log_file.txt"
 OLA=false
 CLEAN_RESULTS=false
+OLA_HD_SERVER="141.5.99.53"
 
 UNCOMPLETED_STEP=false
 DOCKER_RAPPER=""
 PARENT_WORKSPACE="" 
 PROCESS_TITLE=""
 UPLOAD_WF=false
-LAREX_VIEW=true
+LAREX_VIEW=false
 
 #Get the options
 while getopts ":s:f:m:u:w:i:c:r:n:elz:o:" opt; do
@@ -240,6 +241,7 @@ create_workspace_without_mets() {
     $DOCKER_RAPPER ocrd workspace -d "/data/$PROCESS_TITLE" set-id 'unique ID'
     for path in images/*.$EXT; do
         base=`basename $path .$EXT`;
+        echo "test 123: ${EXT} ${FILE_GROUP}_${base}"
         $DOCKER_RAPPER ocrd workspace -d "/data/$PROCESS_TITLE" add -G $FILE_GROUP -i ${FILE_GROUP}_${base} -g P_$base -m $MEDIATYPE $path
     done
  
@@ -336,19 +338,49 @@ upload_workflow() {
 submit_job() {
     url="$SERVER_ADDR/workflow/$workflow_id"
     echo "The upload URL is: $url"
-    json_data=$(curl -X POST "$url" -u "$OPERANDI_USER_PASS" -H "Content-Type: application/json" -d '{ "workflow_args": { "workspace_id": "'"$workspace_id"'", "input_file_grp": "'"$FILE_GROUP"'", "mets_name": "mets.xml" }, "sbatch_args": { "cpus": "'"$CPUs"'", "ram": "'"$RAM"'"} }')
+    
+    # Construct the JSON payload
+    json_payload=$(cat <<EOF
+    {
+        "workflow_args": {
+            "workspace_id": "$workspace_id",
+            "input_file_grp": "$FILE_GROUP",
+            "remove_file_grps": "",
+            "preserve_file_grps": "$FILE_GROUP,OCR-D-OCR" ,
+            "mets_name": "mets.xml"
+        },
+        "sbatch_args": {
+            "partition": "standard96:shared",
+            "cpus": $CPUs,
+            "ram": $RAM
+        }
+    }
+EOF
+    )
+
+    # Send the POST request
+    json_data=$(curl -X POST "$url" -u "$OPERANDI_USER_PASS" \
+        -H "Content-Type: application/json" \
+        -d "$json_payload")
+
+    echo $json_data
+    
     if [ $? -ne 0 ]; then
         log_error "Failed to submit the job."
         exit 1
     fi
+
+    # Extract job_id from the response
     job_id=$(echo "$json_data" | grep -o '"resource_id":"[^"]*' | cut -d '"' -f 4 | head -n 1)
     
-    if [ -z "$job_id" ] ; then
-       log_error "job_id is empty. Response: $json_data"
-       exit 1
+    if [ -z "$job_id" ]; then
+        log_error "job_id is empty. Response: $json_data"
+        exit 1
     fi
     
+    echo "Job successfully submitted with ID: $job_id"
 }
+
 
 # Function to use local ocrd
 process_with_local_ocrd() {
@@ -413,10 +445,28 @@ download_results_logs() {
     log_info "Results Logs are available now"
 }
 
-# Function to download results
+# Function to delete the workspace
+delete_workspace() {
+    echo "Deleting the workspace..."
+    curl -X DELETE "$SERVER_ADDR/workspace/$workspace_id" -u "$OPERANDI_USER_PASS"
+    if [ $? -ne 0 ]; then
+        log_error "Failed to delete the workspace."
+        exit 1
+    fi
+    echo "Workspace deleted successfully"
+    log_info "Workspace deleted successfully"
+}
+
+
+# Function to upload to OLA-HD
 upload_to_ola_hd() {
     log_info "Uploading the results to OLA-HD..."
-    curl -X POST 141.5.99.53/api/bag -u "$OLA_USR" -H 'content-type: multipart/form-data' -F file=@"$OCRD_RESULTS"
+    json_data=$(curl -X POST $OLA_HD_SERVER/api/bag -u "$OLA_USR" -H 'content-type: multipart/form-data' -F file=@"$OCRD_RESULTS")
+
+    # Extract the PID value
+    ola_pid=$(echo "$json_data" | grep -o '"pid":"[^"]*' | cut -d '"' -f 4 | head -n 1)
+    echo "$(basename "$WORKSPACE_DIR") >>> $OLA_HD_SERVER/search-detail?id=$ola_pid"  >> "ola_hd_pids.txt"
+    
     if [ $? -ne 0 ]; then
         log_error "Failed to download the results."
         exit 1
@@ -445,6 +495,7 @@ check_job_status() {
         log_info "Job completed successfully."
         download_results
         download_results_logs
+        delete_workspace
         break
     fi
 
