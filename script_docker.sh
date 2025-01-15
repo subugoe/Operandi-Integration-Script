@@ -241,7 +241,6 @@ create_workspace_without_mets() {
     $DOCKER_RAPPER ocrd workspace -d "/data/$PROCESS_TITLE" set-id 'unique ID'
     for path in images/*.$EXT; do
         base=`basename $path .$EXT`;
-        echo "test 123: ${EXT} ${FILE_GROUP}_${base}"
         $DOCKER_RAPPER ocrd workspace -d "/data/$PROCESS_TITLE" add -G $FILE_GROUP -i ${FILE_GROUP}_${base} -g P_$base -m $MEDIATYPE $path
     done
  
