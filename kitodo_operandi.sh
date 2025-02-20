@@ -164,12 +164,13 @@ check_step_completion() {
 mark_step_completed() {
     local step_name="$1"
     local completion_flag="$WORKSPACE_DIR/.${step_name}_completed"
-    touch "$completion_flag"
+    
 
     # Create a directory for the step
     local step_dir="$WORKSPACE_DIR/.${step_name}_snapshot"
     mkdir -p "$step_dir"
 
+    touch "$completion_flag"
     # Store relevant parameters as files in the directory
     echo "$workflow_id" > "$step_dir/workflow_id"
     echo "$job_id" > "$step_dir/job_id"
