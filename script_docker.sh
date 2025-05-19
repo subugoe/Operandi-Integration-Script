@@ -436,7 +436,7 @@ download_results() {
 # Function to download results
 download_results_logs() {
     echo "Downloading the results..."
-    curl -X GET "$SERVER_ADDR/workflow/$workflow_id/$job_id/logs" -u "$OPERANDI_USER_PASS" -H "accept: application/vnd.zip" -o "$OCRD_RESULTS_LOGS"
+    curl -X GET "$SERVER_ADDR/workflow-job/$job_id/logs" -u "$OPERANDI_USER_PASS" -H "accept: application/vnd.zip" -o "$OCRD_RESULTS_LOGS"
     if [ $? -ne 0 ]; then
         log_error "Failed to download the results logs."
         exit 1
@@ -479,7 +479,7 @@ check_job_status() {
         # Sleep for a while before checking again
 	sleep 30
 
-	url="$SERVER_ADDR/workflow/$workflow_id/$job_id"
+	url="$SERVER_ADDR/workflow-job/$job_id"
         log_info "The job URL is: $url"
         json_data=$(curl -X GET "$url" -u "$OPERANDI_USER_PASS")
         if [ $? -ne 0 ]; then
