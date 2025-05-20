@@ -20,7 +20,7 @@ export OCRD_DOWNLOAD_RETRIES=3
 
 # Default values
 EXISTING_METS=false
-SERVER_ADDR="http://operandi.ocr-d.de" 
+SERVER_ADDR="https://operandi.ocr-d.de" 
 FILE_GROUP="DEFAULT"
 WORKFLOW=""
 METS_URL=""
